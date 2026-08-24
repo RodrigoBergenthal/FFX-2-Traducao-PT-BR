@@ -4,19 +4,22 @@
 
 Os arquivos de instalação devem ser obtidos somente pela página de Releases deste repositório:
 
-https://github.com/ManoXande/FFX-2-Traducao-PT-BR/releases
+**https://github.com/RodrigoBergenthal/FFX-2-Traducao-PT-BR/releases**
 
-Enquanto não existir uma Release publicada, não há instalador ou pacote manual oficialmente distribuído pelo projeto.
+Links diretos da versão mais recente (v1.1.3):
+
+- Instalador Windows: https://github.com/RodrigoBergenthal/FFX-2-Traducao-PT-BR/releases/download/v1.1.3/FFX2-Traducao-PTBR-Setup.exe
+- Pacote manual ZIP (v1.1.1): https://github.com/RodrigoBergenthal/FFX-2-Traducao-PT-BR/releases/download/v1.1.1/FFX-2-Traducao-PT-BR-v1.1.1.zip
+
+Não baixe de cópias reenviadas por terceiros em fóruns, Discord ou sites espelho.
 
 ## Verificação SHA-256
 
-Cada Release deve informar:
+Cada Release informa nome, tamanho e hash SHA-256. Exemplo para o instalador v1.1.3:
 
-- nome exato do arquivo;
-- tamanho;
-- hash SHA-256;
-- data de compilação;
-- versão do External File Loader incluída.
+```
+999960c686002b4b23e661c8f58b4b5a32d1a8b5716c710ca22937a63cf37a0e
+```
 
 No Windows, o hash pode ser conferido pelo PowerShell:
 
@@ -27,40 +30,27 @@ Get-FileHash ".\FFX2-Traducao-PTBR-Setup.exe" -Algorithm SHA256
 No Linux ou Steam Deck:
 
 ```bash
-sha256sum FFX-2-Traducao-PT-BR-v1.0.zip
+sha256sum FFX2-Traducao-PTBR-Setup.exe
+sha256sum FFX-2-Traducao-PT-BR-v1.1.1.zip
 ```
 
-Não execute o arquivo se o resultado não for idêntico ao publicado na Release oficial.
+## Instalador sem assinatura digital
 
-## SmartScreen e assinatura digital
+O instalador Windows ainda não possui assinatura digital. O SmartScreen pode exibir um aviso. Confirme o hash SHA-256 antes de executar. O pacote manual (ZIP) permanece disponível como alternativa.
 
-O instalador ainda não possui assinatura digital. Por isso, o Windows pode exibir um aviso do SmartScreen. A ausência de assinatura não comprova que um arquivo seja seguro.
+## Reporte de problemas de segurança
 
-Antes de executar:
+Se encontrar comportamento suspeito em arquivos obtidos pela Release oficial, abra uma issue descrevendo:
 
-1. confirme que o download veio da Release oficial;
-2. verifique o hash SHA-256;
-3. prefira a instalação manual pelo ZIP caso não queira executar um instalador não assinado.
+- de onde baixou o arquivo;
+- hash SHA-256 calculado localmente;
+- comportamento observado (antivírus, SmartScreen, arquivos inesperados).
 
-## Comportamento esperado
+Não publique links de downloads alternativos na issue.
 
-O instalador:
+## Boas práticas
 
-- tenta localizar a biblioteca da Steam;
-- valida a presença de `FFX-2.exe` e `FFX2_Data.vbf`;
-- adiciona os arquivos do loader e da tradução à pasta do jogo;
-- cria uma entrada de desinstalação no Windows;
-- não deve substituir `FFX2_Data.vbf`.
-
-## Reporte responsável
-
-Não publique dados pessoais, chaves, credenciais ou arquivos do jogo ao relatar um problema. Abra uma Issue com:
-
-- sistema operacional;
-- versão do pacote;
-- origem do download;
-- hash SHA-256 do arquivo;
-- mensagem de erro;
-- trecho relevante de `hook.log`, removendo caminhos ou dados pessoais.
-
-Problemas críticos de segurança devem ser descritos de forma objetiva, sem anexar arquivos proprietários do jogo.
+- Faça backup dos saves antes de instalar qualquer mod
+- Use apenas o External File Loader incluído no pacote oficial
+- Remova arquivos adicionados pelo mod antes de verificar integridade na Steam
+- Consulte `LEIA-ME.txt` para instalação, remoção e compatibilidade

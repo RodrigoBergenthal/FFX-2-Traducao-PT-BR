@@ -8,7 +8,7 @@
   Precisa ser executado a partir do repositório, com a pasta arquivos-do-jogo/
   preenchida. Feche o jogo antes de rodar.
 
-  Espelha a lógica do instalador Inno Setup (v1.1.1+):
+  Espelha a lógica do instalador Inno Setup (v1.1.3):
   - pasta válida = contém FFX-2.exe na raiz
   - FFX2_Data.vbf pode estar em data\ (layout padrão da Steam)
 #>

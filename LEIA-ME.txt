@@ -3,6 +3,20 @@
   Para PC (Windows) e Steam Deck / Linux (Proton)
 ================================================================
 
+DOWNLOAD (v1.1.3)
+-----------------
+Instalador Windows (recomendado):
+  https://github.com/RodrigoBergenthal/FFX-2-Traducao-PT-BR/releases/download/v1.1.3/FFX2-Traducao-PTBR-Setup.exe
+
+Pacote manual ZIP (Steam Deck / Linux):
+  https://github.com/RodrigoBergenthal/FFX-2-Traducao-PT-BR/releases/download/v1.1.1/FFX-2-Traducao-PT-BR-v1.1.1.zip
+
+Todas as versões:
+  https://github.com/RodrigoBergenthal/FFX-2-Traducao-PT-BR/releases
+
+SHA-256 do instalador v1.1.3:
+  999960c686002b4b23e661c8f58b4b5a32d1a8b5716c710ca22937a63cf37a0e
+
 AVISO IMPORTANTE
 ----------------
 Este é um projeto gratuito, não comercial e criado por fãs. Não possui
@@ -49,7 +63,11 @@ O que permanece em inglês:
 Baixe o instalador ou o pacote manual somente pela página oficial de
 Releases do projeto:
 
-    https://github.com/ManoXande/FFX-2-Traducao-PT-BR/releases
+    https://github.com/RodrigoBergenthal/FFX-2-Traducao-PT-BR/releases
+
+Links diretos (v1.1.3):
+  Setup: .../releases/download/v1.1.3/FFX2-Traducao-PTBR-Setup.exe
+  ZIP:   .../releases/download/v1.1.1/FFX-2-Traducao-PT-BR-v1.1.1.zip
 
 Antes de executar:
 1. Confira o nome e o tamanho do arquivo.
@@ -210,8 +228,9 @@ integridade dos arquivos" da Steam.
 Distribuição gratuita. Não venda, não cobre acesso e não condicione o
 download a pagamentos ou doações.
 
-Versão do pacote: 1.1.2 (2026-08-24)
-Correções desta versão: botão Buscar jogo automaticamente estilizado (tema FFX-2).
+Versão do pacote: 1.1.3 (2026-08-24)
+Correções desta versão: botão Buscar jogo com largura dobrada (994 px).
+Versão 1.1.2: botão Buscar jogo automaticamente estilizado (tema FFX-2).
 Versão 1.1.1: busca inteligente da pasta do jogo no instalador;
 validação correta do FFX2_Data.vbf em data\.
 Versão 1.1: rótulo "Audio" e "Vsync" nas opções de vídeo.

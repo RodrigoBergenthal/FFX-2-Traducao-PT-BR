@@ -47,6 +47,6 @@ Botão "Buscar jogo automaticamente" (v1.1.2+)
 - btn-buscar-normal.bmp, btn-buscar-hover.bmp, btn-buscar-disabled.bmp (994x48)
   Arte original gerada com Python + Pillow: gradiente azul oceano (tema Spira),
   borda dourada estilo menu FFX, texto em serif bold. Paleta alinhada ao site
-  da tradução (.agents/context/DESIGN.md). O instalador usa normal e disabled;
+  da tradução (azul oceano + dourado). O instalador usa normal e disabled;
   hover fica reservado para versões futuras do Inno Setup com suporte a eventos
   de mouse no controle.

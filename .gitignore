@@ -1,6 +1,8 @@
 # Saídas de build
 instalador/saida/
+.build/
 __pycache__/
+*.pyc
 
 # Artefatos de distribuição: preparar localmente e publicar somente como
 # anexos de Release, sem incorporá-los ao histórico público.
@@ -10,3 +12,23 @@ arquivos-do-jogo/*.dll
 *.zip
 *.exe
 *.sha256
+
+# IDE, editores e ferramentas locais
+.cursor/
+.claude/
+.agents/
+.vscode/
+.idea/
+*.code-workspace
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Orientação para IA / agentes (não faz parte do projeto público)
+CLAUDE.md
+AGENTS.md
+.cursorrules
+.cursorignore
