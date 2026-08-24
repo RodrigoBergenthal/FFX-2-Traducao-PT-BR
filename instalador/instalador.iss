@@ -6,6 +6,7 @@
 ; v1.1 — pasta padrão corrigida; detecção multi-biblioteca; UX do assistente.
 ; v1.1.1 — busca inteligente + validação correta do VBF em data\
 ; v1.1.2 — botão "Buscar jogo automaticamente" estilizado (tema FFX-2)
+; v1.1.3 — botão com largura dobrada (994px) para melhor proporção visual
 ;
 ; Layout real da instalação Steam (AppID 359870):
 ;   ...\FINAL FANTASY FFX&FFX-2 HD Remaster\
@@ -22,7 +23,7 @@
 ;   Prioridade: candidato com exe + vbf > candidato só com exe
 
 #define MyAppName "Tradução PT-BR - FINAL FANTASY X-2 HD Remaster"
-#define MyAppVersion "1.1.2"
+#define MyAppVersion "1.1.3"
 #define MyAppPublisher "Carlos Alexandre de Oliveira"
 #define NomePastaJogo "FINAL FANTASY FFX&FFX-2 HD Remaster"
 #define SteamAppId "359870"
@@ -809,11 +810,13 @@ begin
 
   BtnBuscarJogo := TBitmapImage.Create(WizardForm);
   BtnBuscarJogo.Parent := WizardForm.SelectDirPage;
-  BtnBuscarJogo.Left := WizardForm.DirEdit.Left;
+  BtnBuscarJogo.Width := 994;
+  BtnBuscarJogo.Height := 48;
+  BtnBuscarJogo.Left := WizardForm.DirEdit.Left + (WizardForm.DirEdit.Width - 994) div 2;
+  if BtnBuscarJogo.Left < 0 then
+    BtnBuscarJogo.Left := 0;
   BtnBuscarJogo.Top := WizardForm.DirEdit.Top + WizardForm.DirEdit.Height + 12;
-  BtnBuscarJogo.Width := WizardForm.DirEdit.Width;
-  BtnBuscarJogo.Height := 40;
-  BtnBuscarJogo.Stretch := True;
+  BtnBuscarJogo.Stretch := False;
   BtnBuscarJogo.OnClick := @BtnBuscarJogoClick;
   DefinirEstadoBtnBuscar(True);
 
