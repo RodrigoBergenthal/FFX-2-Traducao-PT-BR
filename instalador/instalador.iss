@@ -5,6 +5,7 @@
 ; v1.0 — detecção básica Steam; validação exigia FFX2_Data.vbf na raiz (incorreto).
 ; v1.1 — pasta padrão corrigida; detecção multi-biblioteca; UX do assistente.
 ; v1.1.1 — busca inteligente + validação correta do VBF em data\
+; v1.1.2 — botão "Buscar jogo automaticamente" estilizado (tema FFX-2)
 ;
 ; Layout real da instalação Steam (AppID 359870):
 ;   ...\FINAL FANTASY FFX&FFX-2 HD Remaster\
@@ -21,7 +22,7 @@
 ;   Prioridade: candidato com exe + vbf > candidato só com exe
 
 #define MyAppName "Tradução PT-BR - FINAL FANTASY X-2 HD Remaster"
-#define MyAppVersion "1.1.1"
+#define MyAppVersion "1.1.2"
 #define MyAppPublisher "Carlos Alexandre de Oliveira"
 #define NomePastaJogo "FINAL FANTASY FFX&FFX-2 HD Remaster"
 #define SteamAppId "359870"
@@ -75,6 +76,9 @@ FinishedLabelNoIcons=A tradução foi copiada para a pasta do jogo. Abra o FFX-2
 
 [Files]
 Source: "..\arquivos-do-jogo\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "assets\btn-buscar-normal.bmp"; Flags: dontcopy
+Source: "assets\btn-buscar-hover.bmp"; Flags: dontcopy
+Source: "assets\btn-buscar-disabled.bmp"; Flags: dontcopy
 
 [UninstallDelete]
 Type: files; Name: "{app}\hook.log"
@@ -93,8 +97,9 @@ var
   CaminhoJogoDetectado: String;  { último caminho válido encontrado pela busca }
   JaDetectou: Boolean;           { evita repetir varredura completa na mesma sessão }
   AjudaDirExibida: Boolean;
-  BtnBuscarJogo: TNewButton;     { "Buscar jogo automaticamente" }
+  BtnBuscarJogo: TBitmapImage;     { botão estilizado "Buscar jogo automaticamente" }
   LblStatusBusca: TNewStaticText;{ feedback da busca na tela de pasta }
+  BtnBuscarJogoAtivo: Boolean;   { evita clique duplo durante a varredura }
 
 { ---------------------------------------------------------------------------
   Validação de pasta — regra: FFX-2.exe na raiz é obrigatório; VBF é desejável
@@ -704,8 +709,25 @@ begin
 end;
 
 { ---------------------------------------------------------------------------
-  UI: botão de busca, mensagens e eventos do assistente
+  UI: botão de busca estilizado, mensagens e eventos do assistente
   --------------------------------------------------------------------------- }
+
+procedure DefinirEstadoBtnBuscar(Habilitado: Boolean);
+var
+  Arquivo: String;
+begin
+  BtnBuscarJogoAtivo := Habilitado;
+  if not Habilitado then
+    Arquivo := 'btn-buscar-disabled.bmp'
+  else
+    Arquivo := 'btn-buscar-normal.bmp';
+
+  BtnBuscarJogo.Bitmap.LoadFromFile(ExpandConstant('{tmp}\' + Arquivo));
+  if Habilitado then
+    BtnBuscarJogo.Cursor := crHand
+  else
+    BtnBuscarJogo.Cursor := crDefault;
+end;
 
 function MensagemPastaInvalida(const Caminho: String): String;
 var
@@ -735,26 +757,39 @@ procedure BtnBuscarJogoClick(Sender: TObject);
 var
   Encontrado, Vbf: String;
 begin
+  if not BtnBuscarJogoAtivo then
+    Exit;
+
   { Dispara BuscarJogoInteligente e preenche o campo de pasta do assistente }
-  BtnBuscarJogo.Enabled := False;
+  DefinirEstadoBtnBuscar(False);
   LblStatusBusca.Caption := 'Procurando FFX-2.exe nas bibliotecas da Steam...';
+  LblStatusBusca.Font.Color := $006B8299; { azul oceano — BGR }
   WizardForm.Refresh;
 
   Encontrado := BuscarJogoInteligente();
 
-  BtnBuscarJogo.Enabled := True;
+  DefinirEstadoBtnBuscar(True);
   if Encontrado <> '' then
   begin
     WizardForm.DirEdit.Text := Encontrado;
     CaminhoJogoDetectado := Encontrado;
     Vbf := CaminhoVbfNoJogo(Encontrado);
     if Vbf <> '' then
-      LblStatusBusca.Caption := 'Jogo encontrado. FFX-2.exe e FFX2_Data.vbf localizados.'
+    begin
+      LblStatusBusca.Caption := 'Jogo encontrado. FFX-2.exe e FFX2_Data.vbf localizados.';
+      LblStatusBusca.Font.Color := $003C8CB4; { dourado — BGR }
+    end
     else
+    begin
       LblStatusBusca.Caption := 'FFX-2.exe encontrado. FFX2_Data.vbf não localizado — confira o download na Steam.';
+      LblStatusBusca.Font.Color := $006B8299;
+    end;
   end
   else
+  begin
     LblStatusBusca.Caption := 'Não encontramos o jogo. Instale o FFX-2 pela Steam ou selecione a pasta manualmente.';
+    LblStatusBusca.Font.Color := $004A4AA8; { coral suave — BGR }
+  end;
 end;
 
 function InitializeSetup(): Boolean;
@@ -766,29 +801,43 @@ end;
 
 procedure InitializeWizard();
 begin
-  BtnBuscarJogo := TNewButton.Create(WizardForm);
+  ExtractTemporaryFile('btn-buscar-normal.bmp');
+  ExtractTemporaryFile('btn-buscar-hover.bmp');
+  ExtractTemporaryFile('btn-buscar-disabled.bmp');
+
+  BtnBuscarJogoAtivo := True;
+
+  BtnBuscarJogo := TBitmapImage.Create(WizardForm);
   BtnBuscarJogo.Parent := WizardForm.SelectDirPage;
-  BtnBuscarJogo.Caption := 'Buscar jogo automaticamente';
   BtnBuscarJogo.Left := WizardForm.DirEdit.Left;
   BtnBuscarJogo.Top := WizardForm.DirEdit.Top + WizardForm.DirEdit.Height + 12;
   BtnBuscarJogo.Width := WizardForm.DirEdit.Width;
-  BtnBuscarJogo.Height := 23;
+  BtnBuscarJogo.Height := 40;
+  BtnBuscarJogo.Stretch := True;
   BtnBuscarJogo.OnClick := @BtnBuscarJogoClick;
+  DefinirEstadoBtnBuscar(True);
 
   LblStatusBusca := TNewStaticText.Create(WizardForm);
   LblStatusBusca.Parent := WizardForm.SelectDirPage;
   LblStatusBusca.AutoSize := True;
   LblStatusBusca.Left := WizardForm.DirEdit.Left;
   LblStatusBusca.Top := BtnBuscarJogo.Top + BtnBuscarJogo.Height + 8;
+  LblStatusBusca.Font.Color := $006B8299;
   LblStatusBusca.Caption := 'O instalador procura FFX-2.exe e FFX2_Data.vbf (em data\) nas bibliotecas da Steam.';
 
   if CaminhoJogoDetectado <> '' then
   begin
     WizardForm.DirEdit.Text := CaminhoJogoDetectado;
     if PastaJogoIdeal(CaminhoJogoDetectado) then
-      LblStatusBusca.Caption := 'Jogo detectado automaticamente.'
+    begin
+      LblStatusBusca.Caption := 'Jogo detectado automaticamente.';
+      LblStatusBusca.Font.Color := $003C8CB4;
+    end
     else
+    begin
       LblStatusBusca.Caption := 'FFX-2.exe detectado. Confira se o jogo está completo na Steam.';
+      LblStatusBusca.Font.Color := $006B8299;
+    end;
   end;
 end;
 

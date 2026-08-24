@@ -14,7 +14,7 @@
 
 ## Situação do lançamento
 
-A versão 1.1.1 já está publicada, com instalador corrigido (busca inteligente da pasta do jogo e validação do VBF em `data\`). A versão 1.0 permanece disponível no histórico de Releases.
+A versão 1.1.2 traz o botão **Buscar jogo automaticamente** estilizado no tema FFX-2 (azul oceano + borda dourada). A 1.1.1 já está publicada, com instalador corrigido (busca inteligente da pasta do jogo e validação do VBF em `data\`). A versão 1.0 permanece disponível no histórico de Releases.
 
 Baixe somente pela página de [Releases](https://github.com/RodrigoBergenthal/FFX-2-Traducao-PT-BR/releases) — o tamanho e o hash SHA-256 de cada arquivo são informados na própria Release.
 
