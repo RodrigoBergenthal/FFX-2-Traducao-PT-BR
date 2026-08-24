@@ -22,12 +22,18 @@ if (-not (Test-Path -LiteralPath (Join-Path $origem 'dinput8.dll'))) {
     exit 1
 }
 
-function Test-PastaJogo {
+function Test-PastaJogoMinima {
     param([string]$Caminho)
     if ([string]::IsNullOrWhiteSpace($Caminho)) { return $false }
-    $exe = Join-Path $Caminho 'FFX-2.exe'
-    $vbf = Join-Path $Caminho 'FFX2_Data.vbf'
-    return (Test-Path -LiteralPath $exe) -and (Test-Path -LiteralPath $vbf)
+    return (Test-Path -LiteralPath (Join-Path $Caminho 'FFX-2.exe'))
+}
+
+function Test-PastaJogoCompleta {
+    param([string]$Caminho)
+    if (-not (Test-PastaJogoMinima $Caminho)) { return $false }
+    $vbfRaiz = Join-Path $Caminho 'FFX2_Data.vbf'
+    $vbfData = Join-Path $Caminho 'data\FFX2_Data.vbf'
+    return (Test-Path -LiteralPath $vbfRaiz) -or (Test-Path -LiteralPath $vbfData)
 }
 
 function Get-SteamPath {
@@ -75,7 +81,7 @@ function Find-PastaJogo {
     foreach ($k in $regKeys) {
         if (Test-Path $k) {
             $loc = (Get-ItemProperty $k -ErrorAction SilentlyContinue).InstallLocation
-            if (Test-PastaJogo $loc) { return $loc.TrimEnd('\') }
+            if (Test-PastaJogoMinima $loc) { return $loc.TrimEnd('\') }
         }
     }
 
@@ -83,7 +89,7 @@ function Find-PastaJogo {
     if ($steam) {
         foreach ($lib in Get-BibliotecasSteam $steam) {
             $candidato = Join-Path $lib "steamapps\common\$nomePastaJogo"
-            if (Test-PastaJogo $candidato) { return $candidato }
+            if (Test-PastaJogoMinima $candidato) { return $candidato }
         }
     }
 
@@ -97,7 +103,7 @@ function Find-PastaJogo {
             "\Jogos\Steam\steamapps\common\$nomePastaJogo"
         )) {
             $candidato = "${drive}:$sufixo"
-            if (Test-PastaJogo $candidato) { return $candidato }
+            if (Test-PastaJogoMinima $candidato) { return $candidato }
         }
     }
     return $null
@@ -110,10 +116,15 @@ if (-not $destino) {
     $destino = $destino.Trim().Trim('"')
 }
 
-if (-not (Test-PastaJogo $destino)) {
+if (-not (Test-PastaJogoMinima $destino)) {
     Write-Host "ERRO: pasta invalida: $destino" -ForegroundColor Red
-    Write-Host 'A pasta precisa conter FFX-2.exe e FFX2_Data.vbf.'
+    Write-Host 'A pasta precisa conter FFX-2.exe.'
     exit 1
+}
+
+if (-not (Test-PastaJogoCompleta $destino)) {
+    Write-Host 'AVISO: FFX2_Data.vbf nao encontrado na raiz nem em data\.' -ForegroundColor Yellow
+    Write-Host 'Continuando porque a traducao so precisa do FFX-2.exe na pasta.'
 }
 
 $ffx2 = Get-Process -Name 'FFX-2','FFX' -ErrorAction SilentlyContinue

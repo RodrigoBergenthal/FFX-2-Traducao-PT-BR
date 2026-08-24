@@ -9,7 +9,7 @@
 ; - AppendDefaultDirName criava uma subpasta extra quando o nome tinha "&"
 
 #define MyAppName "Tradução PT-BR - FINAL FANTASY X-2 HD Remaster"
-#define MyAppVersion "1.1"
+#define MyAppVersion "1.1.1"
 #define MyAppPublisher "Carlos Alexandre de Oliveira"
 #define NomePastaJogo "FINAL FANTASY FFX&FFX-2 HD Remaster"
 #define SteamAppId "359870"
@@ -78,6 +78,24 @@ var
   CaminhoJogoDetectado: String;
   JaDetectou: Boolean;
   AjudaDirExibida: Boolean;
+  BtnBuscarJogo: TNewButton;
+  LblStatusBusca: TNewStaticText;
+
+function ArquivoExisteNoJogo(const Pasta, NomeArquivo: String): Boolean;
+begin
+  Result :=
+    FileExists(Pasta + '\' + NomeArquivo) or
+    FileExists(Pasta + '\data\' + NomeArquivo);
+end;
+
+function CaminhoVbfNoJogo(const Pasta: String): String;
+begin
+  Result := '';
+  if FileExists(Pasta + '\FFX2_Data.vbf') then
+    Result := Pasta + '\FFX2_Data.vbf'
+  else if FileExists(Pasta + '\data\FFX2_Data.vbf') then
+    Result := Pasta + '\data\FFX2_Data.vbf';
+end;
 
 function ValidarPastaJogo(const Caminho: String): Boolean;
 begin
@@ -89,7 +107,13 @@ end;
 
 function PastaJogoCompleta(const Caminho: String): Boolean;
 begin
-  Result := ValidarPastaJogo(Caminho) and FileExists(Caminho + '\FFX2_Data.vbf');
+  { FFX-2.exe fica na raiz; FFX2_Data.vbf costuma estar em data\ — não bloquear se só o exe existir }
+  Result := ValidarPastaJogo(Caminho);
+end;
+
+function PastaJogoIdeal(const Caminho: String): Boolean;
+begin
+  Result := ValidarPastaJogo(Caminho) and (CaminhoVbfNoJogo(Caminho) <> '');
 end;
 
 function NormalizarCaminho(const Caminho: String): String;
@@ -100,6 +124,92 @@ begin
   StringChangeEx(Result, '/', '\', True);
   if (Result <> '') and (Result[Length(Result)] = '\') then
     Delete(Result, Length(Result), 1);
+end;
+
+function CandidatoJaListado(const Lista: TArrayOfString; const Caminho: String): Boolean;
+var
+  I: Integer;
+begin
+  Result := False;
+  for I := 0 to GetArrayLength(Lista) - 1 do
+    if CompareText(NormalizarCaminho(Lista[I]), NormalizarCaminho(Caminho)) = 0 then
+    begin
+      Result := True;
+      Exit;
+    end;
+end;
+
+procedure AdicionarCandidato(var Lista: TArrayOfString; const Caminho: String);
+var
+  Normalizado: String;
+begin
+  Normalizado := NormalizarCaminho(Caminho);
+  if ValidarPastaJogo(Normalizado) and not CandidatoJaListado(Lista, Normalizado) then
+  begin
+    SetArrayLength(Lista, GetArrayLength(Lista) + 1);
+    Lista[GetArrayLength(Lista) - 1] := Normalizado;
+  end;
+end;
+
+function MelhorCandidato(const Lista: TArrayOfString): String;
+var
+  I: Integer;
+  Caminho: String;
+begin
+  Result := '';
+  for I := 0 to GetArrayLength(Lista) - 1 do
+  begin
+    Caminho := NormalizarCaminho(Lista[I]);
+    if PastaJogoIdeal(Caminho) then
+    begin
+      Result := Caminho;
+      Exit;
+    end;
+  end;
+
+  for I := 0 to GetArrayLength(Lista) - 1 do
+  begin
+    Caminho := NormalizarCaminho(Lista[I]);
+    if ValidarPastaJogo(Caminho) then
+    begin
+      Result := Caminho;
+      Exit;
+    end;
+  end;
+end;
+
+function BuscarExeEmPastaCommon(const PastaCommon: String): String;
+var
+  Busca: TFindRec;
+  SubPasta: String;
+begin
+  Result := '';
+  if not DirExists(PastaCommon) then
+    Exit;
+
+  if ValidarPastaJogo(PastaCommon) then
+  begin
+    Result := NormalizarCaminho(PastaCommon);
+    Exit;
+  end;
+
+  if FindFirst(PastaCommon + '\*', Busca) then
+  try
+    repeat
+      if (Busca.Attributes and FILE_ATTRIBUTE_DIRECTORY <> 0) and
+         (Busca.Name <> '.') and (Busca.Name <> '..') then
+      begin
+        SubPasta := NormalizarCaminho(PastaCommon + '\' + Busca.Name);
+        if ValidarPastaJogo(SubPasta) then
+        begin
+          Result := SubPasta;
+          Exit;
+        end;
+      end;
+    until not FindNext(Busca);
+  finally
+    FindClose(Busca);
+  end;
 end;
 
 function ExtrairStringsAspas(const Linha: String): TArrayOfString;
@@ -324,6 +434,88 @@ begin
   Result := Candidatos;
 end;
 
+function BuscarEmBibliotecaSteam(const CaminhoBiblioteca: String): String;
+var
+  Candidatos: TArrayOfString;
+  Caminhos: TArrayOfString;
+  PastaCommon, Encontrado: String;
+  I: Integer;
+begin
+  Result := '';
+  SetArrayLength(Candidatos, 0);
+
+  Caminhos := MontarCaminhosCandidatos(CaminhoBiblioteca);
+  for I := 0 to GetArrayLength(Caminhos) - 1 do
+    AdicionarCandidato(Candidatos, Caminhos[I]);
+
+  PastaCommon := NormalizarCaminho(CaminhoBiblioteca + '\steamapps\common');
+  if DirExists(PastaCommon) then
+    AdicionarCandidato(Candidatos, BuscarExeEmPastaCommon(PastaCommon));
+
+  PastaCommon := NormalizarCaminho(CaminhoBiblioteca + '\SteamApps\common');
+  if DirExists(PastaCommon) then
+    AdicionarCandidato(Candidatos, BuscarExeEmPastaCommon(PastaCommon));
+
+  Result := MelhorCandidato(Candidatos);
+  if Result <> '' then
+    Log('Busca inteligente (biblioteca): ' + Result);
+end;
+
+function BuscarJogoInteligente(): String;
+var
+  CaminhoSteam: String;
+  Bibliotecas: TArrayOfString;
+  Candidatos: TArrayOfString;
+  Encontrado: String;
+  I, D: Integer;
+  Raizes: TArrayOfString;
+  Candidato: String;
+begin
+  SetArrayLength(Candidatos, 0);
+  Result := '';
+
+  Encontrado := ObterPastaPeloRegistroSteamApp();
+  if Encontrado <> '' then
+    AdicionarCandidato(Candidatos, Encontrado);
+
+  CaminhoSteam := ObterCaminhoSteam();
+  if CaminhoSteam <> '' then
+  begin
+    LerBibliotecasSteam(CaminhoSteam, Bibliotecas);
+    for I := 0 to GetArrayLength(Bibliotecas) - 1 do
+    begin
+      Encontrado := BuscarEmBibliotecaSteam(Bibliotecas[I]);
+      if Encontrado <> '' then
+        AdicionarCandidato(Candidatos, Encontrado);
+    end;
+  end;
+
+  SetArrayLength(Raizes, 6);
+  Raizes[0] := '\Program Files (x86)\Steam\steamapps\common';
+  Raizes[1] := '\Program Files\Steam\steamapps\common';
+  Raizes[2] := '\Steam\steamapps\common';
+  Raizes[3] := '\SteamLibrary\steamapps\common';
+  Raizes[4] := '\Jogos\Steam\steamapps\common';
+  Raizes[5] := '\Games\Steam\steamapps\common';
+
+  for D := 0 to 23 do
+    for I := 0 to GetArrayLength(Raizes) - 1 do
+    begin
+      Candidato := Chr(Ord('C') + D) + ':' + Raizes[I];
+      Encontrado := BuscarExeEmPastaCommon(Candidato);
+      if Encontrado <> '' then
+        AdicionarCandidato(Candidatos, Encontrado);
+    end;
+
+  Result := MelhorCandidato(Candidatos);
+  if Result <> '' then
+  begin
+    JaDetectou := True;
+    CaminhoJogoDetectado := Result;
+    Log('Busca inteligente concluída: ' + Result);
+  end;
+end;
+
 function PrimeiroCandidatoValido(const Candidatos: TArrayOfString): String;
 var
   I: Integer;
@@ -343,7 +535,7 @@ end;
 
 function EncontrarPastaJogoAPartir(const CaminhoInicial: String): String;
 var
-  Atual, Filho: String;
+  Atual, Filho, Pai: String;
   I: Integer;
 begin
   Result := '';
@@ -351,11 +543,28 @@ begin
   if Atual = '' then
     Exit;
 
+  if CompareText(ExtractFileName(Atual), 'data') = 0 then
+  begin
+    Pai := NormalizarCaminho(ExtractFileDir(Atual));
+    if ValidarPastaJogo(Pai) then
+    begin
+      Result := Pai;
+      Exit;
+    end;
+  end;
+
   for I := 1 to 6 do
   begin
     if ValidarPastaJogo(Atual) then
     begin
       Result := Atual;
+      Exit;
+    end;
+
+    Filho := BuscarExeEmPastaCommon(Atual);
+    if Filho <> '' then
+    begin
+      Result := Filho;
       Exit;
     end;
 
@@ -390,25 +599,26 @@ function DetectarPorDrivesComuns(): String;
 var
   Raizes: TArrayOfString;
   I, D: Integer;
-  Candidato: String;
+  Candidato, Encontrado: String;
 begin
   Result := '';
   SetArrayLength(Raizes, 6);
-  Raizes[0] := '\Program Files (x86)\Steam\steamapps\common\' + NOME_PASTA_JOGO;
-  Raizes[1] := '\Program Files\Steam\steamapps\common\' + NOME_PASTA_JOGO;
-  Raizes[2] := '\Steam\steamapps\common\' + NOME_PASTA_JOGO;
-  Raizes[3] := '\SteamLibrary\steamapps\common\' + NOME_PASTA_JOGO;
-  Raizes[4] := '\Jogos\Steam\steamapps\common\' + NOME_PASTA_JOGO;
-  Raizes[5] := '\Games\Steam\steamapps\common\' + NOME_PASTA_JOGO;
+  Raizes[0] := '\Program Files (x86)\Steam\steamapps\common';
+  Raizes[1] := '\Program Files\Steam\steamapps\common';
+  Raizes[2] := '\Steam\steamapps\common';
+  Raizes[3] := '\SteamLibrary\steamapps\common';
+  Raizes[4] := '\Jogos\Steam\steamapps\common';
+  Raizes[5] := '\Games\Steam\steamapps\common';
 
   for D := 0 to 23 do
   begin
     for I := 0 to GetArrayLength(Raizes) - 1 do
     begin
       Candidato := Chr(Ord('C') + D) + ':' + Raizes[I];
-      if ValidarPastaJogo(Candidato) then
+      Encontrado := BuscarExeEmPastaCommon(Candidato);
+      if Encontrado <> '' then
       begin
-        Result := Candidato;
+        Result := Encontrado;
         Log('Pasta do jogo via varredura de discos: ' + Result);
         Exit;
       end;
@@ -417,10 +627,6 @@ begin
 end;
 
 function DetectarPastaJogo(): String;
-var
-  CaminhoSteam: String;
-  Bibliotecas: TArrayOfString;
-  I: Integer;
 begin
   if JaDetectou then
   begin
@@ -428,36 +634,7 @@ begin
     Exit;
   end;
 
-  JaDetectou := True;
-  Result := '';
-
-  Result := ObterPastaPeloRegistroSteamApp();
-  if Result = '' then
-  begin
-    CaminhoSteam := ObterCaminhoSteam();
-    if CaminhoSteam <> '' then
-    begin
-      LerBibliotecasSteam(CaminhoSteam, Bibliotecas);
-      for I := 0 to GetArrayLength(Bibliotecas) - 1 do
-      begin
-        Result := PrimeiroCandidatoValido(MontarCaminhosCandidatos(Bibliotecas[I]));
-        if Result <> '' then
-          Break;
-      end;
-    end;
-  end;
-
-  if Result = '' then
-    Result := DetectarPorDrivesComuns();
-
-  if Result = '' then
-  begin
-    Result := EncontrarPastaJogoAPartir(ExpandConstant('{commonpf32}\Steam'));
-    if Result = '' then
-      Result := EncontrarPastaJogoAPartir(ExpandConstant('{pf32}\Steam'));
-  end;
-
-  CaminhoJogoDetectado := Result;
+  Result := BuscarJogoInteligente();
   if Result <> '' then
     Log('Pasta do jogo detectada: ' + Result)
   else
@@ -536,21 +713,52 @@ begin
 end;
 
 function MensagemPastaInvalida(const Caminho: String): String;
+var
+  Vbf: String;
 begin
   if (Caminho = '') or not DirExists(Caminho) then
     Result := 'Essa pasta não existe.'
   else if not FileExists(Caminho + '\FFX-2.exe') then
     Result :=
       'Não achei o arquivo FFX-2.exe aqui.' + #13#10#13#10 +
-      'Você provavelmente selecionou uma pasta acima ou abaixo da pasta do jogo.' + #13#10 +
-      'A pasta certa contém FFX-2.exe e FFX2_Data.vbf lado a lado.'
-  else if not FileExists(Caminho + '\FFX2_Data.vbf') then
-    Result :=
-      'Achei o FFX-2.exe, mas falta o FFX2_Data.vbf.' + #13#10#13#10 +
-      'Isso costuma significar que o jogo ainda não terminou de baixar. ' +
-      'Na Steam, use "Verificar integridade dos arquivos" e tente de novo.'
+      'A pasta certa contém FFX-2.exe na raiz.' + #13#10 +
+      'O arquivo FFX2_Data.vbf fica em data\ (não precisa estar na mesma pasta do exe).' + #13#10#13#10 +
+      'Use o botão "Buscar jogo automaticamente" ou aponte para a pasta aberta pela Steam em Procurar arquivos locais.'
   else
-    Result := 'Não encontrei o FFX-2 nesta pasta.';
+  begin
+    Vbf := CaminhoVbfNoJogo(Caminho);
+    if Vbf = '' then
+      Result :=
+        'Encontrei FFX-2.exe, mas não achei FFX2_Data.vbf na raiz nem em data\.' + #13#10#13#10 +
+        'Verifique na Steam se o jogo terminou de baixar (Verificar integridade dos arquivos).'
+    else
+      Result := 'Não encontrei o FFX-2 nesta pasta.';
+  end;
+end;
+
+procedure BtnBuscarJogoClick(Sender: TObject);
+var
+  Encontrado, Vbf: String;
+begin
+  BtnBuscarJogo.Enabled := False;
+  LblStatusBusca.Caption := 'Procurando FFX-2.exe nas bibliotecas da Steam...';
+  WizardForm.Refresh;
+
+  Encontrado := BuscarJogoInteligente();
+
+  BtnBuscarJogo.Enabled := True;
+  if Encontrado <> '' then
+  begin
+    WizardForm.DirEdit.Text := Encontrado;
+    CaminhoJogoDetectado := Encontrado;
+    Vbf := CaminhoVbfNoJogo(Encontrado);
+    if Vbf <> '' then
+      LblStatusBusca.Caption := 'Jogo encontrado. FFX-2.exe e FFX2_Data.vbf localizados.'
+    else
+      LblStatusBusca.Caption := 'FFX-2.exe encontrado. FFX2_Data.vbf não localizado — confira o download na Steam.';
+  end
+  else
+    LblStatusBusca.Caption := 'Não encontramos o jogo. Instale o FFX-2 pela Steam ou selecione a pasta manualmente.';
 end;
 
 function InitializeSetup(): Boolean;
@@ -562,8 +770,30 @@ end;
 
 procedure InitializeWizard();
 begin
+  BtnBuscarJogo := TNewButton.Create(WizardForm);
+  BtnBuscarJogo.Parent := WizardForm.SelectDirPage;
+  BtnBuscarJogo.Caption := 'Buscar jogo automaticamente';
+  BtnBuscarJogo.Left := WizardForm.DirEdit.Left;
+  BtnBuscarJogo.Top := WizardForm.DirEdit.Top + WizardForm.DirEdit.Height + 12;
+  BtnBuscarJogo.Width := WizardForm.DirEdit.Width;
+  BtnBuscarJogo.Height := 23;
+  BtnBuscarJogo.OnClick := @BtnBuscarJogoClick;
+
+  LblStatusBusca := TNewStaticText.Create(WizardForm);
+  LblStatusBusca.Parent := WizardForm.SelectDirPage;
+  LblStatusBusca.AutoSize := True;
+  LblStatusBusca.Left := WizardForm.DirEdit.Left;
+  LblStatusBusca.Top := BtnBuscarJogo.Top + BtnBuscarJogo.Height + 8;
+  LblStatusBusca.Caption := 'O instalador procura FFX-2.exe e FFX2_Data.vbf (em data\) nas bibliotecas da Steam.';
+
   if CaminhoJogoDetectado <> '' then
+  begin
     WizardForm.DirEdit.Text := CaminhoJogoDetectado;
+    if PastaJogoIdeal(CaminhoJogoDetectado) then
+      LblStatusBusca.Caption := 'Jogo detectado automaticamente.'
+    else
+      LblStatusBusca.Caption := 'FFX-2.exe detectado. Confira se o jogo está completo na Steam.';
+  end;
 end;
 
 procedure CurPageChanged(CurPageID: Integer);
@@ -575,8 +805,7 @@ begin
     else if not AjudaDirExibida then
     begin
       WizardForm.SelectDirLabel.Caption :=
-        'Não encontramos o jogo automaticamente.' + #13#10#13#10 +
-        'Clique em Procurar e escolha a pasta que contém FFX-2.exe.' + #13#10#13#10 +
+        'Escolha a pasta do jogo (onde está FFX-2.exe) ou clique em Buscar jogo automaticamente.' + #13#10#13#10 +
         'Steam > botão direito em "FINAL FANTASY X/X-2 HD Remaster" >' + #13#10 +
         'Gerenciar > Procurar arquivos locais.';
       AjudaDirExibida := True;
@@ -620,9 +849,18 @@ begin
     begin
       MsgBox(
         MensagemPastaInvalida(CaminhoEscolhido) + #13#10#13#10 +
-        'Dica: na Steam, clique com o botão direito no jogo > Gerenciar > Procurar arquivos locais.',
+        'Dica: use Buscar jogo automaticamente ou Procurar arquivos locais na Steam.',
         mbError, MB_OK);
       Result := False;
+    end
+    else if not PastaJogoIdeal(CaminhoEscolhido) then
+    begin
+      if MsgBox(
+        'Encontrei FFX-2.exe, mas não localizei FFX2_Data.vbf na raiz nem em data\.' + #13#10#13#10 +
+        'A tradução pode instalar, mas o jogo pode não abrir corretamente até você verificar os arquivos na Steam.' + #13#10#13#10 +
+        'Deseja continuar mesmo assim?',
+        mbConfirmation, MB_YESNO) = IDNO then
+        Result := False;
     end;
   end;
 end;
