@@ -14,9 +14,9 @@
 
 ## Situação do lançamento
 
-A versão 1.0 já está publicada, com instalador para Windows e pacote manual (ZIP). A versão 1.1, com correções em rótulos de telas de menu, está em preparação para uma próxima Release.
+A versão 1.1.1 já está publicada, com instalador corrigido (busca inteligente da pasta do jogo e validação do VBF em `data\`). A versão 1.0 permanece disponível no histórico de Releases.
 
-Baixe somente pela página de [Releases](https://github.com/ManoXande/FFX-2-Traducao-PT-BR/releases) — o tamanho e o hash SHA-256 de cada arquivo são informados na própria Release.
+Baixe somente pela página de [Releases](https://github.com/RodrigoBergenthal/FFX-2-Traducao-PT-BR/releases) — o tamanho e o hash SHA-256 de cada arquivo são informados na própria Release.
 
 ## O que está traduzido
 

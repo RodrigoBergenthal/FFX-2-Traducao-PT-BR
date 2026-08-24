@@ -1,12 +1,24 @@
 ; Instalador da tradução PT-BR — FINAL FANTASY X-2 HD Remaster (Steam)
 ; Copia apenas arquivos da tradução para a pasta do jogo, sem alterar dados originais.
 ;
-; Falhas comuns da v1.0 que esta revisão corrige:
-; - pasta padrão em Program Files (o jogo está em steamapps\common)
-; - detecção só no registro 32-bit / biblioteca padrão da Steam
-; - validação rígida: escolher steamapps\common ou uma subpasta falhava
-; - texto do assistente falava em "destino da tradução", não na pasta do jogo
-; - AppendDefaultDirName criava uma subpasta extra quando o nome tinha "&"
+; Histórico de correções relevantes:
+; v1.0 — detecção básica Steam; validação exigia FFX2_Data.vbf na raiz (incorreto).
+; v1.1 — pasta padrão corrigida; detecção multi-biblioteca; UX do assistente.
+; v1.1.1 — busca inteligente + validação correta do VBF em data\
+;
+; Layout real da instalação Steam (AppID 359870):
+;   ...\FINAL FANTASY FFX&FFX-2 HD Remaster\
+;     FFX-2.exe          ← marcador da pasta de instalação da tradução
+;     FFX.exe
+;     data\FFX2_Data.vbf ← arquivo grande; NÃO fica ao lado do exe
+;     data\FFX_Data.vbf
+;
+; Serviço de busca inteligente (BuscarJogoInteligente):
+;   1. Registro Windows "Steam App 359870" (InstallLocation)
+;   2. libraryfolders.vdf + appmanifest_359870.acf de cada biblioteca
+;   3. Varredura de steamapps\common\* em discos C..Z
+;   4. Botão "Buscar jogo automaticamente" na tela de pasta
+;   Prioridade: candidato com exe + vbf > candidato só com exe
 
 #define MyAppName "Tradução PT-BR - FINAL FANTASY X-2 HD Remaster"
 #define MyAppVersion "1.1.1"
@@ -68,6 +80,9 @@ Source: "..\arquivos-do-jogo\*"; DestDir: "{app}"; Flags: ignoreversion recurses
 Type: files; Name: "{app}\hook.log"
 
 [Code]
+{ ---------------------------------------------------------------------------
+  Constantes e estado do assistente
+  --------------------------------------------------------------------------- }
 const
   NOME_PASTA_JOGO = '{#NomePastaJogo}';
   STEAM_APP_ID = '{#SteamAppId}';
@@ -75,21 +90,19 @@ const
   CHAVE_STEAM_APP32 = 'SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\Steam App {#SteamAppId}';
 
 var
-  CaminhoJogoDetectado: String;
-  JaDetectou: Boolean;
+  CaminhoJogoDetectado: String;  { último caminho válido encontrado pela busca }
+  JaDetectou: Boolean;           { evita repetir varredura completa na mesma sessão }
   AjudaDirExibida: Boolean;
-  BtnBuscarJogo: TNewButton;
-  LblStatusBusca: TNewStaticText;
+  BtnBuscarJogo: TNewButton;     { "Buscar jogo automaticamente" }
+  LblStatusBusca: TNewStaticText;{ feedback da busca na tela de pasta }
 
-function ArquivoExisteNoJogo(const Pasta, NomeArquivo: String): Boolean;
-begin
-  Result :=
-    FileExists(Pasta + '\' + NomeArquivo) or
-    FileExists(Pasta + '\data\' + NomeArquivo);
-end;
+{ ---------------------------------------------------------------------------
+  Validação de pasta — regra: FFX-2.exe na raiz é obrigatório; VBF é desejável
+  --------------------------------------------------------------------------- }
 
 function CaminhoVbfNoJogo(const Pasta: String): String;
 begin
+  { Steam guarda o VBF em data\; alguns espelhos antigos tinham na raiz }
   Result := '';
   if FileExists(Pasta + '\FFX2_Data.vbf') then
     Result := Pasta + '\FFX2_Data.vbf'
@@ -99,6 +112,7 @@ end;
 
 function ValidarPastaJogo(const Caminho: String): Boolean;
 begin
+  { Único requisito rígido: pasta do jogo = onde está FFX-2.exe }
   Result :=
     (Caminho <> '') and
     DirExists(Caminho) and
@@ -113,8 +127,13 @@ end;
 
 function PastaJogoIdeal(const Caminho: String): Boolean;
 begin
+  { Candidato preferido na busca: exe presente e dados do jogo localizados }
   Result := ValidarPastaJogo(Caminho) and (CaminhoVbfNoJogo(Caminho) <> '');
 end;
+
+{ ---------------------------------------------------------------------------
+  Utilitários de caminho e lista de candidatos
+  --------------------------------------------------------------------------- }
 
 function NormalizarCaminho(const Caminho: String): String;
 begin
@@ -156,6 +175,7 @@ var
   I: Integer;
   Caminho: String;
 begin
+  { 1º: pasta ideal (exe + vbf); 2º: aceita só exe para não bloquear instalação }
   Result := '';
   for I := 0 to GetArrayLength(Lista) - 1 do
   begin
@@ -177,6 +197,10 @@ begin
     end;
   end;
 end;
+
+{ ---------------------------------------------------------------------------
+  Busca local em steamapps\common — lista subpastas até achar FFX-2.exe
+  --------------------------------------------------------------------------- }
 
 function BuscarExeEmPastaCommon(const PastaCommon: String): String;
 var
@@ -211,6 +235,10 @@ begin
     FindClose(Busca);
   end;
 end;
+
+{ ---------------------------------------------------------------------------
+  Leitura de registro Steam e arquivos VDF/ACF
+  --------------------------------------------------------------------------- }
 
 function ExtrairStringsAspas(const Linha: String): TArrayOfString;
 var
@@ -434,13 +462,18 @@ begin
   Result := Candidatos;
 end;
 
+{ ---------------------------------------------------------------------------
+  Serviço de busca inteligente — orquestra registro, bibliotecas e discos
+  --------------------------------------------------------------------------- }
+
 function BuscarEmBibliotecaSteam(const CaminhoBiblioteca: String): String;
 var
   Candidatos: TArrayOfString;
   Caminhos: TArrayOfString;
-  PastaCommon, Encontrado: String;
+  PastaCommon: String;
   I: Integer;
 begin
+  { Caminhos conhecidos + varredura de toda a pasta common desta biblioteca }
   Result := '';
   SetArrayLength(Candidatos, 0);
 
@@ -516,22 +549,9 @@ begin
   end;
 end;
 
-function PrimeiroCandidatoValido(const Candidatos: TArrayOfString): String;
-var
-  I: Integer;
-  Caminho: String;
-begin
-  Result := '';
-  for I := 0 to GetArrayLength(Candidatos) - 1 do
-  begin
-    Caminho := NormalizarCaminho(Candidatos[I]);
-    if ValidarPastaJogo(Caminho) then
-    begin
-      Result := Caminho;
-      Exit;
-    end;
-  end;
-end;
+{ ---------------------------------------------------------------------------
+  Ajuste de pasta escolhida manualmente (sobe/desce até achar FFX-2.exe)
+  --------------------------------------------------------------------------- }
 
 function EncontrarPastaJogoAPartir(const CaminhoInicial: String): String;
 var
@@ -545,6 +565,7 @@ begin
 
   if CompareText(ExtractFileName(Atual), 'data') = 0 then
   begin
+    { Usuário selecionou data\ — subir um nível para a raiz do jogo }
     Pai := NormalizarCaminho(ExtractFileDir(Atual));
     if ValidarPastaJogo(Pai) then
     begin
@@ -595,39 +616,9 @@ begin
   end;
 end;
 
-function DetectarPorDrivesComuns(): String;
-var
-  Raizes: TArrayOfString;
-  I, D: Integer;
-  Candidato, Encontrado: String;
-begin
-  Result := '';
-  SetArrayLength(Raizes, 6);
-  Raizes[0] := '\Program Files (x86)\Steam\steamapps\common';
-  Raizes[1] := '\Program Files\Steam\steamapps\common';
-  Raizes[2] := '\Steam\steamapps\common';
-  Raizes[3] := '\SteamLibrary\steamapps\common';
-  Raizes[4] := '\Jogos\Steam\steamapps\common';
-  Raizes[5] := '\Games\Steam\steamapps\common';
-
-  for D := 0 to 23 do
-  begin
-    for I := 0 to GetArrayLength(Raizes) - 1 do
-    begin
-      Candidato := Chr(Ord('C') + D) + ':' + Raizes[I];
-      Encontrado := BuscarExeEmPastaCommon(Candidato);
-      if Encontrado <> '' then
-      begin
-        Result := Encontrado;
-        Log('Pasta do jogo via varredura de discos: ' + Result);
-        Exit;
-      end;
-    end;
-  end;
-end;
-
 function DetectarPastaJogo(): String;
 begin
+  { Entrada única da detecção automática na abertura do instalador }
   if JaDetectou then
   begin
     Result := CaminhoJogoDetectado;
@@ -712,6 +703,10 @@ begin
   RemoverPastaSeVazia(Caminho);
 end;
 
+{ ---------------------------------------------------------------------------
+  UI: botão de busca, mensagens e eventos do assistente
+  --------------------------------------------------------------------------- }
+
 function MensagemPastaInvalida(const Caminho: String): String;
 var
   Vbf: String;
@@ -740,6 +735,7 @@ procedure BtnBuscarJogoClick(Sender: TObject);
 var
   Encontrado, Vbf: String;
 begin
+  { Dispara BuscarJogoInteligente e preenche o campo de pasta do assistente }
   BtnBuscarJogo.Enabled := False;
   LblStatusBusca.Caption := 'Procurando FFX-2.exe nas bibliotecas da Steam...';
   WizardForm.Refresh;

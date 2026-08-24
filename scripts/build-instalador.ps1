@@ -1,6 +1,14 @@
 #Requires -Version 5.1
+<#
+.SYNOPSIS
+  Compila FFX2-Traducao-PTBR-Setup.exe com Inno Setup 6.
 
-$ErrorActionPreference = 'Stop'
+.DESCRIPTION
+  Procura ISCC.exe nos caminhos padrão do Windows e gera o instalador em
+  instalador\saida\ a partir de instalador\instalador.iss.
+
+  Pré-requisito: pasta arquivos-do-jogo\ preenchida antes de compilar.
+#>
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 

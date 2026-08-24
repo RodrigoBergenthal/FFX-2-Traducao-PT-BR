@@ -210,6 +210,7 @@ integridade dos arquivos" da Steam.
 Distribuição gratuita. Não venda, não cobre acesso e não condicione o
 download a pagamentos ou doações.
 
-Versão do pacote: 1.1 (pré-lançamento revisado em 2026-07-13)
-Correções desta versão: rótulo "Audio" ajustado para evitar corte do glifo
-acentuado e rótulo "Vsync" corrigido nas opções de vídeo.
+Versão do pacote: 1.1.1 (2026-08-24)
+Correções desta versão: busca inteligente da pasta do jogo no instalador;
+validação correta do FFX2_Data.vbf em data\; botão Buscar jogo automaticamente.
+Versão 1.1: rótulo "Audio" e "Vsync" nas opções de vídeo.

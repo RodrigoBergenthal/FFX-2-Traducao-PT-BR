@@ -7,6 +7,10 @@
   Alternativa ao Setup.exe quando o SmartScreen bloqueia o instalador.
   Precisa ser executado a partir do repositório, com a pasta arquivos-do-jogo/
   preenchida. Feche o jogo antes de rodar.
+
+  Espelha a lógica do instalador Inno Setup (v1.1.1+):
+  - pasta válida = contém FFX-2.exe na raiz
+  - FFX2_Data.vbf pode estar em data\ (layout padrão da Steam)
 #>
 
 $ErrorActionPreference = 'Stop'
@@ -22,12 +26,14 @@ if (-not (Test-Path -LiteralPath (Join-Path $origem 'dinput8.dll'))) {
     exit 1
 }
 
+# Mínimo para instalar: FFX-2.exe na raiz da pasta escolhida.
 function Test-PastaJogoMinima {
     param([string]$Caminho)
     if ([string]::IsNullOrWhiteSpace($Caminho)) { return $false }
     return (Test-Path -LiteralPath (Join-Path $Caminho 'FFX-2.exe'))
 }
 
+# Ideal: exe + VBF na raiz ou em data\ (não bloqueia se faltar VBF).
 function Test-PastaJogoCompleta {
     param([string]$Caminho)
     if (-not (Test-PastaJogoMinima $Caminho)) { return $false }
@@ -73,6 +79,7 @@ function Get-BibliotecasSteam {
     return $libs
 }
 
+# Busca inteligente: registro Steam App, bibliotecas e caminhos comuns em C..Z.
 function Find-PastaJogo {
     $regKeys = @(
         "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Steam App $steamAppId",
